@@ -1,8 +1,6 @@
 # Minecraft Bedrock Server
 
-Utilities for maintaining a Minecraft Bedrock Dedicated Server on Windows. Schedule the PowerShell script with Windows Task Scheduler and it will check for the latest official server release, install it when needed, preserve your world/configuration, and start the server again.
-
-The repository also includes a small Node.js helper that finds the latest Bedrock server download URL from the official Minecraft server download page.
+Utilities for maintaining a Minecraft Bedrock Dedicated Server on Windows. Schedule the PowerShell script with Windows Task Scheduler and this package will automatically check for the latest official server release, install it when needed, preserve your world/configuration, and start the server again.
 
 ## Repository Contents
 
