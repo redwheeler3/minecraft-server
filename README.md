@@ -260,7 +260,7 @@ Once inside Minecraft:
 
 1. Select **Play** from the main menu.
 2. Go to the **Servers** tab and select any featured server.
-3. On the server list, look for **QYA Server**. If you find it, select it. If you do not, continue to the next step.
+3. On the server list, look for your saved server name. If you find it, select it. If you do not, continue to the next step.
 4. Select **Connect to a Server**.
 5. Enter your server address. For example:
 
