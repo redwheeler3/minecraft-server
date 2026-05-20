@@ -1,8 +1,8 @@
 # Minecraft Bedrock Server
 
-Utilities for maintaining a Minecraft Bedrock Dedicated Server on Windows.
+Utilities for maintaining a Minecraft Bedrock Dedicated Server on Windows. Schedule the PowerShell script with Windows Task Scheduler and it will check for the latest official server release, install it when needed, preserve your world/configuration, and start the server again.
 
-This repository contains a PowerShell update/startup script and a small Node.js helper that finds the latest Bedrock server download URL from the official Minecraft server download page.
+The repository also includes a small Node.js helper that finds the latest Bedrock server download URL from the official Minecraft server download page.
 
 ## Repository Contents
 
@@ -36,7 +36,7 @@ This repository contains a PowerShell update/startup script and a small Node.js 
 ## Requirements
 
 - Windows
-- PowerShell
+- PowerShell, included with Windows
 - Node.js
 - npm
 - Google Chrome installed, because the Playwright helper launches Chrome with `channel: 'chrome'`
@@ -44,48 +44,78 @@ This repository contains a PowerShell update/startup script and a small Node.js 
 
 ## Quick Start
 
-From the repository/root folder:
+There are two common ways to get started:
+
+- **Beginner / no Git tools:** download the repository as a ZIP from GitHub.
+- **Developer / Git user:** clone the repository with Git.
+
+### Option A: Beginner setup without Git
+
+1. Install the required tools:
+   - [Node.js](https://nodejs.org/) for `node` and `npm`
+   - [Google Chrome](https://www.google.com/chrome/), because the helper script launches Chrome through Playwright
+
+2. Download this repository from GitHub:
+   - Open the repository page in your browser.
+   - Select **Code**.
+   - Select **Download ZIP**.
+   - Extract the ZIP somewhere permanent, for example:
+
+     ```text
+     C:\MinecraftServer
+     ```
+
+3. Open PowerShell in that extracted folder:
+   - Open the folder in File Explorer.
+   - Right-click empty space in the folder.
+   - Select **Open in Terminal** or **Open PowerShell window here**.
+
+4. Install the Node dependencies:
+
+   ```powershell
+   npm install
+   ```
+
+5. Run the update/startup script:
+
+   ```powershell
+   .\MinecraftBedrockServerUpdateScript.ps1
+   ```
+
+If PowerShell blocks the script, run it with:
 
 ```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\MinecraftBedrockServerUpdateScript.ps1
+```
+
+### Option B: Developer setup with Git
+
+Clone the repository, then run the script from the repository/root folder:
+
+```powershell
+git clone https://github.com/redwheeler3/minecraft-server.git
+cd minecraft-server
 npm install
 .\MinecraftBedrockServerUpdateScript.ps1
 ```
 
 On first run, the script downloads the latest official Bedrock Dedicated Server ZIP, creates the server directory, extracts the server files, and starts `bedrock_server.exe`.
 
-## Setup
+## Project Layout and Paths
 
-1. Install Node dependencies:
+Keep `MinecraftBedrockServerUpdateScript.ps1`, `get-bedrock-url.js`, `package.json`, and `package-lock.json` together in the same root folder.
 
-   ```powershell
-   npm install
-   ```
+The script uses `$PSScriptRoot`, which means paths are resolved relative to the folder containing `MinecraftBedrockServerUpdateScript.ps1`. In normal use, you do not need to edit these paths:
 
-2. The script uses `$PSScriptRoot` as `$rootDir`, which means “the directory containing this PowerShell script.” In normal use, you do not need to change this. The related paths are built from that root:
+```powershell
+$rootDir = $PSScriptRoot
+$gameDir = "$rootDir\bedrock-server"
+$backupDir = "$rootDir\BACKUP"
+$scriptLogFile = "$rootDir\MinecraftScriptLog.log"
+$serverLogFlle = "$rootDir\MinecraftServerLog.log"
+```
 
-   ```powershell
-   $rootDir = $PSScriptRoot
-   $gameDir = "$rootDir\bedrock-server"
-   $backupDir = "$rootDir\BACKUP"
-   $scriptLogFile = "$rootDir\MinecraftScriptLog.log"
-   $serverLogFlle = "$rootDir\MinecraftServerLog.log"
-   ```
-
-3. Keep `MinecraftBedrockServerUpdateScript.ps1`, `get-bedrock-url.js`, and `package.json` together in the same root folder. If you already have an existing `bedrock-server` folder, place it there too. Otherwise, the script will create `bedrock-server` on first install. The PowerShell script expects the Node helper to be in the same root folder:
-
-   ```powershell
-   $nodeScript = "$rootDir\get-bedrock-url.js"
-   ```
-
-4. Test the script manually in PowerShell before scheduling it:
-
-   ```powershell
-   .\MinecraftBedrockServerUpdateScript.ps1
-   ```
-
-5. After confirming it works, create a Windows Task Scheduler task to run it:
-   - At startup
-   - Periodically when nobody is likely to be connected to the server
+If you already have an existing `bedrock-server` folder, place it in this same root folder before running the script. Otherwise, the script creates `bedrock-server/` on first install.
 
 ## First-Time Install Behavior
 
@@ -158,6 +188,13 @@ This keeps the Git repository focused on the automation scripts and documentatio
 
 After manually testing the script, you can schedule it with Windows Task Scheduler.
 
+Recommended general settings:
+
+- Select **Run whether user is logged on or not**.
+- Check **Run with highest privileges**.
+
+These settings help the scheduled task run reliably after reboots or when no one is logged into Windows.
+
 Suggested action settings:
 
 ```text
@@ -170,6 +207,10 @@ Suggested triggers:
 
 - At system startup, so the server starts automatically after a reboot.
 - On a recurring schedule at a low-traffic time, so the script can check for updates when players are unlikely to be connected.
+- Optionally, when the computer resumes from sleep. In Task Scheduler, create a trigger with **Begin the task** set to **On an event**:
+  - Log: `System`
+  - Source: `Microsoft-Windows-Power-Troubleshooter`
+  - Event ID: `1`
 
 `$PSScriptRoot` is used for the root directory, so the script resolves paths relative to the script file itself. Setting **Start in** is still recommended because it makes scheduled task behavior easier to reason about.
 
@@ -224,15 +265,6 @@ MinecraftServerLog.log
 ```
 
 These are the first places to check when troubleshooting startup, download, extraction, or update issues.
-
-## Notes
-
-- The official Bedrock Dedicated Server ZIP includes a default `server.properties` file. On a first-time install, the script allows `server.properties` to be missing and keeps the default file extracted from the ZIP.
-- On later updates, if `server.properties`, `allowlist.json`, `permissions.json`, `valid_known_packs.json`, or `worlds/` already exist, the script backs them up before replacing the server files and restores them afterward.
-- Updates use a clean install pattern: the existing `bedrock-server/` directory is deleted and recreated before extracting the official server ZIP.
-- The script uses downloaded ZIP filenames to determine whether an update has already been downloaded.
-- If the download fails, the script attempts to start the existing server if it is not already running.
-- Logs are written to the paths configured in `$scriptLogFile` and `$serverLogFlle`.
 
 ## Nintendo Switch Connection Instructions
 
