@@ -8,7 +8,7 @@ This repository contains a PowerShell update/startup script and a small Node.js 
 
 | File | Purpose |
 | --- | --- |
-| `MinecraftBedrockServerUpdateScript.ps1` | Main PowerShell script that checks for Bedrock server updates, backs up configuration files, downloads the latest server ZIP, installs it, restores configuration, and starts the server. |
+| `MinecraftBedrockServerUpdateScript.ps1` | Main PowerShell script that checks for Bedrock server updates, backs up server state, downloads the latest server ZIP, performs a clean install, restores state, and starts the server. |
 | `get-bedrock-url.js` | Node.js script that uses Playwright/Chrome to scrape the latest Bedrock Dedicated Server ZIP URL from minecraft.net. |
 | `package.json` / `package-lock.json` | Node dependency metadata. The project currently depends on `playwright`. |
 
@@ -18,17 +18,20 @@ This repository contains a PowerShell update/startup script and a small Node.js 
 
 1. Uses `get-bedrock-url.js` to find the latest official Bedrock Dedicated Server ZIP.
 2. Checks whether that ZIP has already been downloaded into the backup directory.
-3. Backs up important server configuration files:
+3. Backs up important server state:
    - `server.properties`
    - `allowlist.json`, when present
    - `permissions.json`, when present
+   - `valid_known_packs.json`, when present
+   - `worlds/`, when present
 4. Removes previously downloaded Bedrock server ZIP files from the backup directory.
 5. Downloads the latest Bedrock server ZIP.
 6. Stops the currently running `bedrock_server` process, if one is running.
-7. Extracts the downloaded ZIP into the server directory.
-8. Restores the backed-up configuration files.
-9. Starts `bedrock_server.exe` if it is not already running.
-10. Writes script and server logs to files under the script/root directory.
+7. Deletes and recreates the server directory for a clean install.
+8. Extracts the downloaded ZIP into the clean server directory.
+9. Restores the backed-up state files and `worlds/` folder.
+10. Starts `bedrock_server.exe` if it is not already running.
+11. Writes script and server logs to files under the script/root directory.
 
 ## Requirements
 
@@ -119,17 +122,24 @@ minecraft-server/
 └─ MinecraftServerLog.log
 ```
 
-## Configuration Preserved on Updates
+## State Preserved on Updates
 
-When the server is already installed, the script preserves local configuration before extracting updated server files.
+When the server is already installed, the script preserves local state before replacing server files.
 
 The following files are backed up when present and restored after extraction:
 
 - `server.properties`
 - `allowlist.json`
 - `permissions.json`
+- `valid_known_packs.json`
 
-If one of these files is missing, the script skips it instead of failing. This allows a clean first-time install where `server.properties` comes from the official ZIP.
+The following folder is also backed up and restored when present:
+
+- `worlds/`
+
+If one of these files or folders is missing, the script skips it instead of failing. This allows a clean first-time install, or repeated runs before the server has generated a world.
+
+Updates are installed by deleting and recreating `bedrock-server/`, extracting the official ZIP into the clean directory, and then restoring the backed-up state. This avoids stale server package files while preserving local worlds and configuration.
 
 ## Generated Files
 
@@ -218,7 +228,8 @@ These are the first places to check when troubleshooting startup, download, extr
 ## Notes
 
 - The official Bedrock Dedicated Server ZIP includes a default `server.properties` file. On a first-time install, the script allows `server.properties` to be missing and keeps the default file extracted from the ZIP.
-- On later updates, if `server.properties`, `allowlist.json`, or `permissions.json` already exist, the script backs them up before extracting the new server files and restores them afterward.
+- On later updates, if `server.properties`, `allowlist.json`, `permissions.json`, `valid_known_packs.json`, or `worlds/` already exist, the script backs them up before replacing the server files and restores them afterward.
+- Updates use a clean install pattern: the existing `bedrock-server/` directory is deleted and recreated before extracting the official server ZIP.
 - The script uses downloaded ZIP filenames to determine whether an update has already been downloaded.
 - If the download fails, the script attempts to start the existing server if it is not already running.
 - Logs are written to the paths configured in `$scriptLogFile` and `$serverLogFlle`.

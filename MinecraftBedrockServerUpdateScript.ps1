@@ -118,6 +118,24 @@ if (!$downloadExists -or !$serverInstalled) {
 		Copy-Item -Path "$gameDir\permissions.json" -Destination $backupDir 
 	}
 
+	if (Test-Path -Path "$gameDir\valid_known_packs.json" -PathType Leaf) {
+		Write-Log "Backing up: valid_known_packs.json."
+		Copy-Item -Path "$gameDir\valid_known_packs.json" -Destination $backupDir 
+	}
+
+	if (Test-Path -Path "$gameDir\worlds" -PathType Container) {
+		Write-Log "Backing up: worlds."
+		robocopy "$gameDir\worlds" "$backupDir\worlds" /MIR /R:3 /W:2 | Out-Null
+		if ($LASTEXITCODE -gt 7) {
+			Write-Log "ERROR: World backup failed."
+			Write-Log "Exiting with error."
+			exit(1)
+		}
+	}
+	else {
+		Write-Log "No worlds folder found to back up. This is expected before first server start."
+	}
+
 	if (!$downloadExists) {
 		# DELETE PREVIOUSLY DOWNLOADED SERVER ZIPS
 		if (Test-Path -Path "$backupDir\bedrock-server-*.zip" -PathType Leaf) {
@@ -152,6 +170,7 @@ if (!$downloadExists -or !$serverInstalled) {
 	if (get-process -name bedrock_server -ErrorAction SilentlyContinue) {
 		Write-Log "Stopping server."
 		Stop-Process -name "bedrock_server" 
+		Start-Sleep -Seconds 5
 		if (get-process -name bedrock_server -ErrorAction SilentlyContinue) {
 			Write-Log "ERROR: Could not stop server."
 			if (Test-Path -Path "$backupDir\bedrock-server-*.zip" -PathType Leaf) {
@@ -163,7 +182,13 @@ if (!$downloadExists -or !$serverInstalled) {
 		}
 	}
 
-	# UNZIP
+	# CLEAN INSTALL AND UNZIP
+	Write-Log "Deleting existing server files for clean install."
+	if (Test-Path -Path "$gameDir") {
+		Remove-Item -Path "$gameDir" -Recurse -Force
+	}
+	New-Item -Path $gameDir -ItemType Directory -Force | Out-Null
+
 	Write-Log "Updating server files."
 	Expand-Archive -LiteralPath $output -DestinationPath $gameDir -Force 
 
@@ -184,6 +209,24 @@ if (!$downloadExists -or !$serverInstalled) {
 	if (Test-Path -Path "$backupDir\permissions.json" -PathType Leaf) {
 		Write-Log "Restoring: permissions.json."
 		Copy-Item -Path "$backupDir\permissions.json" -Destination $gameDir 
+	}
+
+	if (Test-Path -Path "$backupDir\valid_known_packs.json" -PathType Leaf) {
+		Write-Log "Restoring: valid_known_packs.json."
+		Copy-Item -Path "$backupDir\valid_known_packs.json" -Destination $gameDir 
+	}
+
+	if (Test-Path -Path "$backupDir\worlds" -PathType Container) {
+		Write-Log "Restoring: worlds."
+		robocopy "$backupDir\worlds" "$gameDir\worlds" /MIR /R:3 /W:2 | Out-Null
+		if ($LASTEXITCODE -gt 7) {
+			Write-Log "ERROR: World restore failed."
+			Write-Log "Exiting with error."
+			exit(1)
+		}
+	}
+	else {
+		Write-Log "No backed up worlds folder to restore."
 	}
 } 
 else {
