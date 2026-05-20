@@ -27,17 +27,25 @@ There are two common setup options.
 
 ### Option A: Beginner setup without Git
 
-1. Install:
-   - [Node.js](https://nodejs.org/)
-   - [Google Chrome](https://www.google.com/chrome/)
-2. Download this repository from GitHub using **Code > Download ZIP**.
-3. Extract it somewhere permanent, for example:
+1. Install the required tools:
+   - [Node.js](https://nodejs.org/) so the `node` and `npm` commands are available.
+   - [Google Chrome](https://www.google.com/chrome/) so the helper script can find the latest Bedrock download.
+2. Download this repository from GitHub:
+   - Open the repository page in your browser.
+   - Select **Code**.
+   - Select **Download ZIP**.
+3. Extract the ZIP somewhere permanent, for example:
 
    ```text
    C:\MinecraftServer
    ```
 
-4. Open PowerShell in the extracted folder.
+   Avoid temporary folders like `Downloads` if you plan to run the server long term.
+
+4. Open PowerShell in the extracted folder:
+   - Open the folder in File Explorer.
+   - Right-click empty space in the folder.
+   - Select **Open in Terminal** or **Open PowerShell window here**.
 5. Install dependencies and run the script:
 
    ```powershell
