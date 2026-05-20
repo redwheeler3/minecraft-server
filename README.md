@@ -14,7 +14,7 @@ This repository contains a PowerShell update/startup script and a small Node.js 
 
 ## What the Update Script Does
 
-`MinecraftBedrockServerUpdateScript.ps1` is intended to run from the directory above the `bedrock-server` folder. It:
+`MinecraftBedrockServerUpdateScript.ps1` uses its own directory as the server root by default. The `bedrock-server` folder, `BACKUP` folder, logs, and helper script are all resolved relative to the PowerShell script location. It:
 
 1. Uses `get-bedrock-url.js` to find the latest official Bedrock Dedicated Server ZIP.
 2. Checks whether that ZIP has already been downloaded into the backup directory.
@@ -28,7 +28,7 @@ This repository contains a PowerShell update/startup script and a small Node.js 
 7. Extracts the downloaded ZIP into the server directory.
 8. Restores the backed-up configuration files.
 9. Starts `bedrock_server.exe` if it is not already running.
-10. Writes script and server logs to files under the configured root directory.
+10. Writes script and server logs to files under the script/root directory.
 
 ## Requirements
 
@@ -58,7 +58,7 @@ On first run, the script downloads the latest official Bedrock Dedicated Server 
    npm install
    ```
 
-2. Review the directory variables near the top of `MinecraftBedrockServerUpdateScript.ps1` and adjust them if needed. By default, `$rootDir` is set to `$PSScriptRoot`, which means “the directory containing this PowerShell script”:
+2. The script uses `$PSScriptRoot` as `$rootDir`, which means “the directory containing this PowerShell script.” In normal use, you do not need to change this. The related paths are built from that root:
 
    ```powershell
    $rootDir = $PSScriptRoot
