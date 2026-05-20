@@ -1,94 +1,57 @@
 # Minecraft Bedrock Server
 
-Utilities for maintaining a Minecraft Bedrock Dedicated Server on Windows. Schedule the PowerShell script with Windows Task Scheduler and this package will automatically check for the latest official server release, install it when needed, preserve your world/configuration, and start the server again.
+Utilities for running and updating a Minecraft Bedrock Dedicated Server on Windows. After initial setup, schedule the PowerShell script with Windows Task Scheduler to automatically check for the latest official server release, install updates when needed, preserve your world and configuration, and start the server again without user interaction.
 
-## Repository Contents
+## What This Does
 
-| File | Purpose |
-| --- | --- |
-| `MinecraftBedrockServerUpdateScript.ps1` | Main PowerShell script that checks for Bedrock server updates, backs up server state, downloads the latest server ZIP, performs a clean install, restores state, and starts the server. |
-| `get-bedrock-url.js` | Node.js script that uses Playwright/Chrome to scrape the latest Bedrock Dedicated Server ZIP URL from minecraft.net. |
-| `package.json` / `package-lock.json` | Node dependency metadata. The project currently depends on `playwright`. |
+This repository contains a small Windows automation setup:
 
-## What the Update Script Does
+- `MinecraftBedrockServerUpdateScript.ps1` checks for updates, backs up local server state, installs the latest Bedrock server files, restores your world/configuration, and starts `bedrock_server.exe`.
+- `get-bedrock-url.js` uses Playwright/Chrome to find the latest official Bedrock Dedicated Server ZIP URL from minecraft.net.
+- `package.json` / `package-lock.json` define the Node dependency on `playwright`.
 
-`MinecraftBedrockServerUpdateScript.ps1` uses its own directory as the server root by default. The `bedrock-server` folder, `BACKUP` folder, logs, and helper script are all resolved relative to the PowerShell script location. It:
-
-1. Uses `get-bedrock-url.js` to find the latest official Bedrock Dedicated Server ZIP.
-2. Checks whether that ZIP has already been downloaded into the backup directory.
-3. Backs up important server state:
-   - `server.properties`
-   - `allowlist.json`, when present
-   - `permissions.json`, when present
-   - `valid_known_packs.json`, when present
-   - `worlds/`, when present
-4. Removes previously downloaded Bedrock server ZIP files from the backup directory.
-5. Downloads the latest Bedrock server ZIP.
-6. Stops the currently running `bedrock_server` process, if one is running.
-7. Deletes and recreates the server directory for a clean install.
-8. Extracts the downloaded ZIP into the clean server directory.
-9. Restores the backed-up state files and `worlds/` folder.
-10. Starts `bedrock_server.exe` if it is not already running.
-11. Writes script and server logs to files under the script/root directory.
+The script resolves paths relative to its own location, so the repository folder is treated as the server root.
 
 ## Requirements
 
 - Windows
 - PowerShell, included with Windows
-- Node.js
-- npm
-- Google Chrome installed, because the Playwright helper launches Chrome with `channel: 'chrome'`
-- A `bedrock-server` directory is optional before first run. The update script creates it and extracts the official server ZIP into it when installing for the first time.
+- Node.js and npm
+- Google Chrome, because the helper script launches Playwright with `channel: 'chrome'`
+
+The `bedrock-server` folder does not need to exist before the first run. The script creates it when installing the server.
 
 ## Quick Start
 
-There are two common ways to get started:
-
-- **Beginner / no Git tools:** download the repository as a ZIP from GitHub.
-- **Developer / Git user:** clone the repository with Git.
+There are two common setup options.
 
 ### Option A: Beginner setup without Git
 
-1. Install the required tools:
-   - [Node.js](https://nodejs.org/) for `node` and `npm`
-   - [Google Chrome](https://www.google.com/chrome/), because the helper script launches Chrome through Playwright
+1. Install:
+   - [Node.js](https://nodejs.org/)
+   - [Google Chrome](https://www.google.com/chrome/)
+2. Download this repository from GitHub using **Code > Download ZIP**.
+3. Extract it somewhere permanent, for example:
 
-2. Download this repository from GitHub:
-   - Open the repository page in your browser.
-   - Select **Code**.
-   - Select **Download ZIP**.
-   - Extract the ZIP somewhere permanent, for example:
+   ```text
+   C:\MinecraftServer
+   ```
 
-     ```text
-     C:\MinecraftServer
-     ```
-
-3. Open PowerShell in that extracted folder:
-   - Open the folder in File Explorer.
-   - Right-click empty space in the folder.
-   - Select **Open in Terminal** or **Open PowerShell window here**.
-
-4. Install the Node dependencies:
+4. Open PowerShell in the extracted folder.
+5. Install dependencies and run the script:
 
    ```powershell
    npm install
-   ```
-
-5. Run the update/startup script:
-
-   ```powershell
    .\MinecraftBedrockServerUpdateScript.ps1
    ```
 
-If PowerShell blocks the script, run it with:
+If PowerShell blocks the script, run:
 
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -File .\MinecraftBedrockServerUpdateScript.ps1
 ```
 
 ### Option B: Developer setup with Git
-
-Clone the repository, then run the script from the repository/root folder:
 
 ```powershell
 git clone https://github.com/redwheeler3/minecraft-server.git
@@ -97,13 +60,11 @@ npm install
 .\MinecraftBedrockServerUpdateScript.ps1
 ```
 
-On first run, the script downloads the latest official Bedrock Dedicated Server ZIP, creates the server directory, extracts the server files, and starts `bedrock_server.exe`.
+On first run, the script downloads the latest official Bedrock Dedicated Server ZIP, creates `bedrock-server/`, extracts the server files, and starts `bedrock_server.exe`.
 
-## Project Layout and Paths
+## How Updates Work
 
-Keep `MinecraftBedrockServerUpdateScript.ps1`, `get-bedrock-url.js`, `package.json`, and `package-lock.json` together in the same root folder.
-
-The script uses `$PSScriptRoot`, which means paths are resolved relative to the folder containing `MinecraftBedrockServerUpdateScript.ps1`. In normal use, you do not need to edit these paths:
+The script uses these paths under the repository/script folder:
 
 ```powershell
 $rootDir = $PSScriptRoot
@@ -113,65 +74,23 @@ $scriptLogFile = "$rootDir\MinecraftScriptLog.log"
 $serverLogFlle = "$rootDir\MinecraftServerLog.log"
 ```
 
-If you already have an existing `bedrock-server` folder, place it in this same root folder before running the script. Otherwise, the script creates `bedrock-server/` on first install.
+During an install or update, the script:
 
-## First-Time Install Behavior
+1. Finds the latest official Bedrock Dedicated Server ZIP.
+2. Skips the update if that ZIP was already downloaded.
+3. Backs up local server state when present:
+   - `server.properties`
+   - `allowlist.json`
+   - `permissions.json`
+   - `valid_known_packs.json`
+   - `worlds/`
+4. Removes older downloaded server ZIPs from `BACKUP/`.
+5. Downloads the latest ZIP.
+6. Stops any running `bedrock_server` process.
+7. Recreates `bedrock-server/` for a clean install.
+8. Extracts the ZIP, restores the backed-up state, and starts the server.
 
-The first run can start from only this repository and its Node dependencies. The `bedrock-server` folder does **not** need to exist ahead of time.
-
-On first install, the script:
-
-1. Finds the latest official Bedrock Dedicated Server ZIP URL.
-2. Creates `BACKUP/` if needed.
-3. Creates `bedrock-server/` if needed.
-4. Downloads the server ZIP into `BACKUP/`.
-5. Extracts the ZIP into `bedrock-server/`.
-6. Keeps the default `server.properties` that is included in the official server ZIP.
-7. Starts `bedrock-server\bedrock_server.exe`.
-
-After the first successful run, the generated layout will look roughly like this:
-
-```text
-minecraft-server/
-├─ MinecraftBedrockServerUpdateScript.ps1
-├─ get-bedrock-url.js
-├─ package.json
-├─ package-lock.json
-├─ README.md
-├─ BACKUP/
-│  └─ bedrock-server-<version>.zip
-├─ bedrock-server/
-│  ├─ bedrock_server.exe
-│  ├─ server.properties
-│  ├─ allowlist.json
-│  ├─ permissions.json
-│  └─ ...
-├─ MinecraftScriptLog.log
-└─ MinecraftServerLog.log
-```
-
-## State Preserved on Updates
-
-When the server is already installed, the script preserves local state before replacing server files.
-
-The following files are backed up when present and restored after extraction:
-
-- `server.properties`
-- `allowlist.json`
-- `permissions.json`
-- `valid_known_packs.json`
-
-The following folder is also backed up and restored when present:
-
-- `worlds/`
-
-If one of these files or folders is missing, the script skips it instead of failing. This allows a clean first-time install, or repeated runs before the server has generated a world.
-
-Updates are installed by deleting and recreating `bedrock-server/`, extracting the official ZIP into the clean directory, and then restoring the backed-up state. This avoids stale server package files while preserving local worlds and configuration.
-
-## Generated Files
-
-The repository includes a `.gitignore` for generated dependencies, downloads, logs, and server runtime files:
+Generated runtime files are intentionally ignored by Git:
 
 ```text
 node_modules/
@@ -180,20 +99,18 @@ BACKUP/
 bedrock-server/
 ```
 
-This keeps the Git repository focused on the automation scripts and documentation rather than downloaded server binaries, runtime data, logs, and local worlds.
+If you already have an existing `bedrock-server` folder, place it beside `MinecraftBedrockServerUpdateScript.ps1` before running the script.
 
 ## Scheduling with Windows Task Scheduler
 
-After manually testing the script, you can schedule it with Windows Task Scheduler.
+After manually testing the script, schedule it with Windows Task Scheduler.
 
-Recommended general settings:
+Important general settings:
 
-- Select **Run whether user is logged on or not**.
-- Check **Run with highest privileges**.
+- Select **Run whether user is logged on or not** so the server can start after reboots or while no one is signed in.
+- Check **Run with highest privileges** so the script has the permissions it needs to stop/start the server process and update files.
 
-These settings help the scheduled task run reliably after reboots or when no one is logged into Windows.
-
-Suggested action settings:
+Suggested action:
 
 ```text
 Program/script: powershell.exe
@@ -203,90 +120,48 @@ Start in: C:\path\to\minecraft-server
 
 Suggested triggers:
 
-- At system startup, so the server starts automatically after a reboot.
-- On a recurring schedule at a low-traffic time, so the script can check for updates when players are unlikely to be connected.
-- Optionally, when the computer resumes from sleep. In Task Scheduler, create a trigger with **Begin the task** set to **On an event**:
+- At system startup, so the server starts after a reboot.
+- On a recurring schedule at a low-traffic time, so updates are checked when players are less likely to be connected.
+- Optionally, when the computer resumes from sleep:
+  - Begin the task: **On an event**
   - Log: `System`
   - Source: `Microsoft-Windows-Power-Troubleshooter`
   - Event ID: `1`
 
-`$PSScriptRoot` is used for the root directory, so the script resolves paths relative to the script file itself. Setting **Start in** is still recommended because it makes scheduled task behavior easier to reason about.
+The script uses `$PSScriptRoot`, but setting **Start in** is still recommended because it makes scheduled task behavior easier to reason about.
 
 ## Troubleshooting
 
-### PowerShell blocks the script
-
-If PowerShell blocks local script execution, run it with:
-
-```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\MinecraftBedrockServerUpdateScript.ps1
-```
-
-### Node or npm is not found
-
-Install Node.js, then confirm both commands work:
-
-```powershell
-node --version
-npm --version
-```
-
-### Playwright or dependencies are missing
-
-Run:
-
-```powershell
-npm install
-```
-
-### Chrome is not installed
-
-The Node helper launches Playwright using:
-
-```js
-channel: 'chrome'
-```
-
-Install Google Chrome, or update `get-bedrock-url.js` to use a different installed browser/channel.
-
-### Download URL cannot be found
-
-The script depends on the structure of the official Minecraft Bedrock server download page. If Microsoft changes that page, `get-bedrock-url.js` may need its selector updated.
-
-### Check the logs
-
-The script writes logs to:
-
-```text
-MinecraftScriptLog.log
-MinecraftServerLog.log
-```
-
-These are the first places to check when troubleshooting startup, download, extraction, or update issues.
+| Problem | Fix |
+| --- | --- |
+| PowerShell blocks the script | Run it with `powershell.exe -ExecutionPolicy Bypass -File .\MinecraftBedrockServerUpdateScript.ps1`. |
+| `node` or `npm` is not found | Install Node.js, then confirm with `node --version` and `npm --version`. |
+| Playwright dependencies are missing | Run `npm install` from the repository folder. |
+| Chrome is not installed | Install Google Chrome, or update `get-bedrock-url.js` to use a different installed browser/channel. |
+| Download URL cannot be found | Microsoft may have changed the Bedrock download page; `get-bedrock-url.js` may need its selector updated. |
+| Startup, download, extraction, or update issues | Check `MinecraftScriptLog.log` and `MinecraftServerLog.log`. |
 
 ## Nintendo Switch Connection Instructions
-
-The following instructions were migrated from the previous PDF file, `How to connect to the server on Switch.pdf`.
 
 Source: [Shockbyte - How to Connect to your Minecraft Bedrock Server on Nintendo Switch](https://shockbyte.com/billing/knowledgebase/850/How-to-Connect-to-your-Minecraft-Bedrock-Server-on-Nintendo-Switch.html)
 
 ### Configure DNS on the Nintendo Switch
 
-1. Go to the home screen by pressing the house button.
-2. Navigate to **System Settings** by selecting the gear icon.
-3. Navigate to **Internet** on the left-hand sidebar.
+1. Press the house button to go to the home screen.
+2. Open **System Settings**.
+3. Select **Internet** from the left sidebar.
 4. Select **Internet Settings**.
-5. If you are prompted for a parental control password in the steps below, the code is `0710`.
-6. Select your currently connected network under **Registered Networks**. If there is no currently connected network, choose the network you want to connect to under **Networks Found**, enter the correct password, and then go back to step 4.
+5. If prompted for a parental control password, the code is `0710`.
+6. Select your current network under **Registered Networks**. If no network is connected, choose one under **Networks Found**, enter the password, then return to **Internet Settings**.
 7. Select **Change Settings**.
-8. Locate **DNS Settings** and set it to **Manual**.
-9. For **Primary DNS**, use:
+8. Set **DNS Settings** to **Manual**.
+9. Set **Primary DNS** to:
 
    ```text
    104.238.130.180
    ```
 
-10. For **Secondary DNS**, use:
+10. Set **Secondary DNS** to:
 
     ```text
     008.008.008.008
@@ -297,13 +172,11 @@ Source: [Shockbyte - How to Connect to your Minecraft Bedrock Server on Nintendo
 
 ### Connect from Minecraft
 
-Once inside Minecraft:
-
 1. Select **Play** from the main menu.
-2. Go to the **Servers** tab and select any featured server.
-3. On the server list, look for your saved server name. If you find it, select it. If you do not, continue to the next step.
+2. Open the **Servers** tab and select any featured server.
+3. On the server list, select your saved server name if it appears. Otherwise, continue.
 4. Select **Connect to a Server**.
-5. Enter your server address. For example:
+5. Enter your server address, for example:
 
    ```text
    your-server.example.com
